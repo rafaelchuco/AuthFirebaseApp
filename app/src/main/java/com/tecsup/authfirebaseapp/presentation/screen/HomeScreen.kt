@@ -20,24 +20,24 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.auth.FirebaseAuth
-import com.tecsup.authfirebaseapp.presentation.viewmodel.CourseViewModel
+import com.tecsup.authfirebaseapp.presentation.viewmodel.EventViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onLogout: () -> Unit,
-    viewModel: CourseViewModel = viewModel()
+    viewModel: EventViewModel = viewModel()
 ) {
     val auth = FirebaseAuth.getInstance()
     val email = auth.currentUser?.email ?: "Usuario"
 
     // Observar estados
-    val courseUiState by viewModel.courseUiState.collectAsState()
+    val eventUiState by viewModel.eventUiState.collectAsState()
     val formState by viewModel.formState.collectAsState()
     val editDialogState by viewModel.editDialogState.collectAsState()
 
     // Diálogo de edición
-    if (editDialogState.isOpen && editDialogState.course != null) {
+    if (editDialogState.isOpen && editDialogState.event != null) {
         Dialog(
             onDismissRequest = { viewModel.closeEditDialog() },
             properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -53,36 +53,39 @@ fun HomeScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Text(
-                        "Editar Curso ✏️",
+                        "Editar Evento ✏️",
                         style = MaterialTheme.typography.titleLarge,
                         color = Color(0xFF1976D2)
                     )
 
                     OutlinedTextField(
-                        value = editDialogState.name,
-                        onValueChange = { viewModel.updateEditName(it) },
-                        label = { Text("Nombre del curso") },
+                        value = editDialogState.title,
+                        onValueChange = { viewModel.updateEditTitle(it) },
+                        label = { Text("Título *") },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
                     )
 
                     OutlinedTextField(
-                        value = editDialogState.teacher,
-                        onValueChange = { viewModel.updateEditTeacher(it) },
-                        label = { Text("Docente") },
+                        value = editDialogState.date,
+                        onValueChange = { viewModel.updateEditDate(it) },
+                        label = { Text("Fecha *") },
+                        placeholder = { Text("DD/MM/YYYY") },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
                     )
 
                     OutlinedTextField(
-                        value = editDialogState.creditsText,
-                        onValueChange = { viewModel.updateEditCredits(it) },
-                        label = { Text("Créditos") },
+                        value = editDialogState.description,
+                        onValueChange = { viewModel.updateEditDescription(it) },
+                        label = { Text("Descripción (opcional)") },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        minLines = 3,
+                        maxLines = 5
                     )
 
-                    courseUiState.error?.let {
+                    eventUiState.error?.let {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -112,15 +115,15 @@ fun HomeScreen(
                         }
 
                         Button(
-                            onClick = { viewModel.updateCourse() },
-                            enabled = !courseUiState.isLoading,
+                            onClick = { viewModel.updateEvent() },
+                            enabled = !eventUiState.isLoading,
                             modifier = Modifier
                                 .weight(1f)
                                 .height(44.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1976D2)),
                             shape = RoundedCornerShape(8.dp)
                         ) {
-                            Text(if (courseUiState.isLoading) "Guardando..." else "Actualizar")
+                            Text(if (eventUiState.isLoading) "Guardando..." else "Actualizar")
                         }
                     }
                 }
@@ -133,7 +136,7 @@ fun HomeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Mis Cursos 📚") },
+                title = { Text("Mis Eventos 📅") },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color(0xFF1976D2),
                     titleContentColor = Color.White,
@@ -190,10 +193,10 @@ fun HomeScreen(
                     }
                 }
 
-                // ----- Formulario nuevo curso -----
+                // ----- Formulario nuevo evento -----
                 item {
                     Text(
-                        "Agregar nuevo curso",
+                        "Crear nuevo evento",
                         style = MaterialTheme.typography.titleMedium
                     )
                 }
@@ -209,32 +212,35 @@ fun HomeScreen(
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             OutlinedTextField(
-                                value = formState.name,
-                                onValueChange = { viewModel.updateFormName(it) },
-                                label = { Text("Nombre del curso") },
+                                value = formState.title,
+                                onValueChange = { viewModel.updateFormTitle(it) },
+                                label = { Text("Título *") },
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(12.dp)
                             )
 
                             OutlinedTextField(
-                                value = formState.teacher,
-                                onValueChange = { viewModel.updateFormTeacher(it) },
-                                label = { Text("Docente") },
+                                value = formState.date,
+                                onValueChange = { viewModel.updateFormDate(it) },
+                                label = { Text("Fecha *") },
+                                placeholder = { Text("DD/MM/YYYY") },
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(12.dp)
                             )
 
                             OutlinedTextField(
-                                value = formState.creditsText,
-                                onValueChange = { viewModel.updateFormCredits(it) },
-                                label = { Text("Créditos") },
+                                value = formState.description,
+                                onValueChange = { viewModel.updateFormDescription(it) },
+                                label = { Text("Descripción (opcional)") },
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp)
+                                shape = RoundedCornerShape(12.dp),
+                                minLines = 3,
+                                maxLines = 5
                             )
 
                             Button(
-                                onClick = { viewModel.saveCourse() },
-                                enabled = !courseUiState.isLoading,
+                                onClick = { viewModel.saveEvent() },
+                                enabled = !eventUiState.isLoading,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(48.dp),
@@ -242,12 +248,12 @@ fun HomeScreen(
                                 shape = RoundedCornerShape(12.dp)
                             ) {
                                 Text(
-                                    if (courseUiState.isLoading) "Guardando..." else "Guardar curso",
+                                    if (eventUiState.isLoading) "Guardando..." else "Guardar evento",
                                     fontSize = 14.sp
                                 )
                             }
 
-                            if (courseUiState.isLoading) {
+                            if (eventUiState.isLoading) {
                                 Box(
                                     modifier = Modifier.fillMaxWidth(),
                                     contentAlignment = Alignment.Center
@@ -256,7 +262,7 @@ fun HomeScreen(
                                 }
                             }
 
-                            courseUiState.error?.let {
+                            eventUiState.error?.let {
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -273,15 +279,15 @@ fun HomeScreen(
                     }
                 }
 
-                // ----- Lista de cursos -----
+                // ----- Lista de eventos -----
                 item {
                     Text(
-                        "Mis cursos registrados (${courseUiState.courses.size})",
+                        "Mis eventos (${eventUiState.events.size})",
                         style = MaterialTheme.typography.titleMedium
                     )
                 }
 
-                if (courseUiState.courses.isEmpty()) {
+                if (eventUiState.events.isEmpty()) {
                     item {
                         Box(
                             modifier = Modifier
@@ -290,7 +296,7 @@ fun HomeScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                "No hay cursos registrados",
+                                "No hay eventos registrados",
                                 color = Color.Gray,
                                 style = MaterialTheme.typography.bodyMedium
                             )
@@ -298,7 +304,7 @@ fun HomeScreen(
                     }
                 }
 
-                items(courseUiState.courses) { course ->
+                items(eventUiState.events) { event ->
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
@@ -309,74 +315,79 @@ fun HomeScreen(
                             modifier = Modifier.padding(16.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
+                            // Título
+                            Text(
+                                event.title,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Color(0xFF1976D2),
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                            )
+                            
+                            // Fecha
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        course.name,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = Color(0xFF1976D2)
-                                    )
-                                    Spacer(Modifier.height(4.dp))
-                                    Text(
-                                        "👨‍🏫 ${course.teacher}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = Color.Gray
-                                    )
-                                }
+                                Text(
+                                    "📅",
+                                    fontSize = 16.sp
+                                )
+                                Text(
+                                    event.date,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Color.Gray
+                                )
+                            }
+
+                            // Descripción (si existe)
+                            if (event.description.isNotBlank()) {
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                                
+                                Text(
+                                    "Descripción:",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.Gray,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                )
+                                
+                                Text(
+                                    event.description,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Color.DarkGray
+                                )
                             }
 
                             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(
-                                        color = Color(0xFFF5F5F5),
-                                        shape = RoundedCornerShape(8.dp)
-                                    )
-                                    .padding(12.dp),
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                Text(
-                                    "📖 ${course.credits} créditos",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = Color(0xFF1976D2),
-                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
-                                )
-                            }
-
+                            // Botones de acción
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Button(
-                                    onClick = { viewModel.openEditDialog(course) },
+                                    onClick = { viewModel.openEditDialog(event) },
                                     modifier = Modifier
                                         .weight(1f)
-                                        .height(36.dp),
+                                        .height(40.dp),
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
                                     Icon(Icons.Filled.Edit, contentDescription = "Editar", tint = Color.White, modifier = Modifier.size(16.dp))
                                     Spacer(Modifier.width(4.dp))
-                                    Text("Editar", color = Color.White, fontSize = 12.sp)
+                                    Text("Editar", color = Color.White, fontSize = 13.sp)
                                 }
 
                                 Button(
-                                    onClick = { viewModel.deleteCourse(course.id) },
+                                    onClick = { viewModel.deleteEvent(event.id) },
                                     modifier = Modifier
                                         .weight(1f)
-                                        .height(36.dp),
+                                        .height(40.dp),
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFCDD2)),
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
                                     Icon(Icons.Filled.Delete, contentDescription = "Eliminar", tint = Color(0xFFC62828), modifier = Modifier.size(16.dp))
                                     Spacer(Modifier.width(4.dp))
-                                    Text("Eliminar", color = Color(0xFFC62828), fontSize = 12.sp)
+                                    Text("Eliminar", color = Color(0xFFC62828), fontSize = 13.sp)
                                 }
                             }
                         }
