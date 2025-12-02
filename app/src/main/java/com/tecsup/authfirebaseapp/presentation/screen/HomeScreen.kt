@@ -145,8 +145,15 @@ fun HomeScreen(
                 actions = {
                     IconButton(
                         onClick = {
-                            auth.signOut()
-                            onLogout()
+                            try {
+                                // Detener listeners antes de cerrar sesión
+                                viewModel.stopListening()
+                                auth.signOut()
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            } finally {
+                                onLogout()
+                            }
                         }
                     ) {
                         Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Cerrar sesión")

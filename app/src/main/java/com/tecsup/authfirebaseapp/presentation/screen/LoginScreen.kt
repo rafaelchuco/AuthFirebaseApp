@@ -30,6 +30,7 @@ fun LoginScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -118,12 +119,40 @@ fun LoginScreen(
                 }
             }
 
+            // Mensaje de error
+            if (errorMessage.isNotBlank()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE))
+                ) {
+                    Text(
+                        errorMessage,
+                        modifier = Modifier.padding(16.dp),
+                        color = Color(0xFFC62828),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+
             // ---------- BOTÓN DE LOGIN ----------
             Button(
                 onClick = {
-                    if (email.isBlank() || password.isBlank()) {
-                        Toast.makeText(context, "Complete todos los campos", Toast.LENGTH_SHORT).show()
-                        return@Button
+                    errorMessage = ""
+                    
+                    when {
+                        email.isBlank() -> {
+                            errorMessage = "Por favor ingresa tu correo electrónico"
+                            return@Button
+                        }
+                        password.isBlank() -> {
+                            errorMessage = "Por favor ingresa tu contraseña"
+                            return@Button
+                        }
+                        !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches() -> {
+                            errorMessage = "Formato de correo inválido"
+                            return@Button
+                        }
                     }
 
                     isLoading = true
@@ -134,12 +163,20 @@ fun LoginScreen(
                                 Toast.makeText(context, "¡Bienvenido! ✅", Toast.LENGTH_SHORT).show()
                                 onLoginSuccess()
                             } else {
-                                Toast.makeText(
-                                    context,
-                                    "Error: ${task.exception?.message}",
-                                    Toast.LENGTH_LONG
-                                ).show()
+                                errorMessage = when (task.exception?.message) {
+                                    "The email address is badly formatted." -> "El formato del correo es incorrecto"
+                                    "The supplied auth credential is incorrect, malformed or has expired." -> "Credenciales incorrectas"
+                                    "There is no user record corresponding to this identifier. The user may have been deleted." -> "Usuario no encontrado"
+                                    "The password is invalid or the user does not have a password." -> "Contraseña incorrecta"
+                                    "Access to this account has been temporarily disabled due to many failed login attempts. You can immediately restore it by resetting your password or you can try again later." -> "Cuenta temporalmente bloqueada por múltiples intentos fallidos"
+                                    "A network error (such as timeout, interrupted connection or unreachable host) has occurred." -> "Error de conexión. Verifica tu internet"
+                                    else -> task.exception?.message ?: "Error al iniciar sesión"
+                                }
                             }
+                        }
+                        .addOnFailureListener { exception ->
+                            isLoading = false
+                            errorMessage = "Error inesperado: ${exception.localizedMessage}"
                         }
                 },
                 enabled = !isLoading,

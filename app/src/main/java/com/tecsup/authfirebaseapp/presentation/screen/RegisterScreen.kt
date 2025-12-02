@@ -32,6 +32,7 @@ fun RegisterScreen(
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -115,22 +116,52 @@ fun RegisterScreen(
                 }
             }
 
+            // Mensaje de error
+            if (errorMessage.isNotBlank()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE))
+                ) {
+                    Text(
+                        errorMessage,
+                        modifier = Modifier.padding(16.dp),
+                        color = Color(0xFFC62828),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+
             // ----------- BOTÓN DE REGISTRO -------------
             Button(
                 onClick = {
-                    if (email.isBlank() || password.isBlank() || confirmPassword.isBlank()) {
-                        Toast.makeText(context, "Complete todos los campos", Toast.LENGTH_SHORT).show()
-                        return@Button
-                    }
-
-                    if (password != confirmPassword) {
-                        Toast.makeText(context, "Las contraseñas no coinciden", Toast.LENGTH_SHORT).show()
-                        return@Button
-                    }
-
-                    if (password.length < 6) {
-                        Toast.makeText(context, "Mínimo 6 caracteres", Toast.LENGTH_SHORT).show()
-                        return@Button
+                    errorMessage = ""
+                    
+                    when {
+                        email.isBlank() -> {
+                            errorMessage = "Por favor ingresa tu correo electrónico"
+                            return@Button
+                        }
+                        !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches() -> {
+                            errorMessage = "Formato de correo inválido"
+                            return@Button
+                        }
+                        password.isBlank() -> {
+                            errorMessage = "Por favor ingresa una contraseña"
+                            return@Button
+                        }
+                        password.length < 6 -> {
+                            errorMessage = "La contraseña debe tener al menos 6 caracteres"
+                            return@Button
+                        }
+                        confirmPassword.isBlank() -> {
+                            errorMessage = "Por favor confirma tu contraseña"
+                            return@Button
+                        }
+                        password != confirmPassword -> {
+                            errorMessage = "Las contraseñas no coinciden"
+                            return@Button
+                        }
                     }
 
                     isLoading = true
@@ -140,17 +171,27 @@ fun RegisterScreen(
                             if (task.isSuccessful) {
                                 Toast.makeText(
                                     context,
-                                    "¡Cuenta creada! ✔️",
+                                    "¡Cuenta creada exitosamente! ✔️",
                                     Toast.LENGTH_SHORT
                                 ).show()
                                 onRegisterSuccess()
                             } else {
-                                Toast.makeText(
-                                    context,
-                                    "Error: ${task.exception?.message}",
-                                    Toast.LENGTH_LONG
-                                ).show()
+                                errorMessage = when {
+                                    task.exception?.message?.contains("email address is already in use") == true -> 
+                                        "Este correo ya está registrado"
+                                    task.exception?.message?.contains("email address is badly formatted") == true -> 
+                                        "El formato del correo es incorrecto"
+                                    task.exception?.message?.contains("network error") == true -> 
+                                        "Error de conexión. Verifica tu internet"
+                                    task.exception?.message?.contains("Password should be at least 6 characters") == true -> 
+                                        "La contraseña debe tener al menos 6 caracteres"
+                                    else -> task.exception?.message ?: "Error al crear la cuenta"
+                                }
                             }
+                        }
+                        .addOnFailureListener { exception ->
+                            isLoading = false
+                            errorMessage = "Error inesperado: ${exception.localizedMessage}"
                         }
                 },
                 enabled = !isLoading,

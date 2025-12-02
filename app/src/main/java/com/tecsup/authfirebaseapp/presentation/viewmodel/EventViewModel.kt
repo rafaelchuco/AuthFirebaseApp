@@ -5,9 +5,11 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.tecsup.authfirebaseapp.domain.model.Event
 import com.tecsup.authfirebaseapp.data.repository.EventRepository
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 
 // Estados UI
@@ -45,22 +47,72 @@ class EventViewModel : ViewModel() {
     private val _editDialogState = MutableStateFlow(EditDialogState())
     val editDialogState: StateFlow<EditDialogState> = _editDialogState.asStateFlow()
 
+    // Job para controlar el listener de Firestore
+    private var listenerJob: Job? = null
+
     init {
         loadEventsRealtime()
     }
 
     // ========== MÉTODOS DE CARGA ==========
     fun loadEventsRealtime() {
-        val uid = auth.currentUser?.uid ?: return
-        viewModelScope.launch {
+        // Cancelar el listener anterior si existe
+        listenerJob?.cancel()
+        
+        val uid = auth.currentUser?.uid
+        if (uid == null) {
+            _eventUiState.value = EventUiState(events = emptyList())
+            return
+        }
+        
+        listenerJob = viewModelScope.launch {
             _eventUiState.value = _eventUiState.value.copy(isLoading = true, error = null)
-            repository.getEventsByUserRealtime(uid).collect { events ->
-                _eventUiState.value = _eventUiState.value.copy(
-                    events = events,
-                    isLoading = false
-                )
+            try {
+                repository.getEventsByUserRealtime(uid)
+                    .catch { exception ->
+                        // Manejo de errores de permisos o conexión
+                        if (exception.message?.contains("PERMISSION_DENIED") == true) {
+                            _eventUiState.value = EventUiState(
+                                events = emptyList(),
+                                isLoading = false,
+                                error = null // No mostrar error si el usuario cerró sesión
+                            )
+                        } else {
+                            _eventUiState.value = _eventUiState.value.copy(
+                                isLoading = false,
+                                error = "Error de conexión: ${exception.message}"
+                            )
+                        }
+                    }
+                    .collect { events ->
+                        _eventUiState.value = _eventUiState.value.copy(
+                            events = events,
+                            isLoading = false
+                        )
+                    }
+            } catch (e: Exception) {
+                if (e.message?.contains("PERMISSION_DENIED") != true) {
+                    _eventUiState.value = _eventUiState.value.copy(
+                        isLoading = false,
+                        error = "Error: ${e.message}"
+                    )
+                }
             }
         }
+    }
+    
+    // Método para limpiar listeners cuando se cierra sesión
+    fun stopListening() {
+        listenerJob?.cancel()
+        listenerJob = null
+        _eventUiState.value = EventUiState(events = emptyList())
+        _formState.value = FormState()
+        _editDialogState.value = EditDialogState()
+    }
+    
+    override fun onCleared() {
+        super.onCleared()
+        stopListening()
     }
 
     // ========== MÉTODOS DE FORMULARIO ==========

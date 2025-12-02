@@ -61,7 +61,8 @@ fun AuthNavGraph(navController: NavHostController) {
             HomeScreen(
                 onLogout = {
                     navController.navigate(Destinations.LOGIN) {
-                        popUpTo(Destinations.HOME) { inclusive = true }
+                        popUpTo(0) { inclusive = true }
+                        launchSingleTop = true
                     }
                 }
             )
